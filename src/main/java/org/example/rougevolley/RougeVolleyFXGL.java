@@ -19,6 +19,7 @@ import org.example.rougevolley.core.GameEvent;
 import org.example.rougevolley.core.GameState;
 import org.example.rougevolley.ecs.Entity;
 import org.example.rougevolley.ecs.components.*;
+import org.example.rougevolley.combat.DamageSystem;
 import org.example.rougevolley.entity.EntityFactory;
 
 import java.util.*;
@@ -187,6 +188,9 @@ public class RougeVolleyFXGL extends GameApplication {
         // ── 更新所有实体 ──
         gameState.updateEntities(dt);
         gameState.addTime(dt);
+
+        // ── 子弹-敌人碰撞检测 ──
+        DamageSystem.checkBulletEnemyCollisions(gameState);
 
         // ── 清理死亡实体 ──
         List<String> removedUuids = gameState.cleanupDeadEntities();
