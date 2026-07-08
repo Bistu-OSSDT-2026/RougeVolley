@@ -36,12 +36,12 @@ public class SimpleEnemyAI implements Component {
         patrolAngle = Math.random() * 2 * Math.PI;
 
         // 初始设置一个随机速度（避免第一帧停顿）
-        owner.getComponent(MovementComponent.class).ifPresent(mc -> {
+        owner.getComponent(MovementComponent.class).ifPresent(mc ->
             mc.setVelocity(
                 Math.cos(patrolAngle) * getSpeed(owner),
                 Math.sin(patrolAngle) * getSpeed(owner)
-            );
-        });
+            )
+        );
     }
 
     // ============================================================
@@ -107,7 +107,7 @@ public class SimpleEnemyAI implements Component {
         }
         Point2D dir = delta.normalize();
 
-        if (room != null && willHitWall(owner, room, dir.getX(), dir.getY())) {
+        if (willHitWall(owner, room, dir.getX(), dir.getY())) {
             // 前方是墙 → 尝试滑行
             double angle = Math.atan2(dir.getY(), dir.getX());
             slideAlongWall(mc, angle, ec.getSpeed(), room, owner);
@@ -129,8 +129,8 @@ public class SimpleEnemyAI implements Component {
         double timer = ec.getPatrolTimer() + dt;
         boolean needNewDir = timer >= ec.getPatrolSwitchInterval()
             || mc.getSpeed() < 0.01
-            || (room != null && willHitWall(owner, room,
-                 Math.cos(patrolAngle), Math.sin(patrolAngle)));
+                || willHitWall(owner, room,
+                Math.cos(patrolAngle), Math.sin(patrolAngle));
 
         if (needNewDir) {
             patrolAngle = Math.random() * 2 * Math.PI;
