@@ -98,7 +98,7 @@ public class Entity {
      */
     public void destroy() {
         active = false;
-        for (Component comp : components.values()) {
+        for (Component comp : new ArrayList<>(components.values())) {
             comp.onDetach(this);
         }
         components.clear();

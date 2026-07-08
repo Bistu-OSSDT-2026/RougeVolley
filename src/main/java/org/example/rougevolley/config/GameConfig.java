@@ -27,6 +27,8 @@ public final class GameConfig {
     public static final double PLAYER_SPEED = 200.0;
     /** 玩家实体尺寸 */
     public static final double PLAYER_SIZE = 32.0;
+    /** 玩家最大生命值上限（防止无限膨胀） */
+    public static final double PLAYER_MAX_HEALTH_CAP = 500.0;
 
     // ── 武器 ──
     /** 默认开火间隔 (秒) */

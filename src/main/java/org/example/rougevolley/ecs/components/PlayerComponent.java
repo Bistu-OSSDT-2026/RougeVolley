@@ -1,5 +1,6 @@
 package org.example.rougevolley.ecs.components;
 
+import org.example.rougevolley.config.GameConfig;
 import org.example.rougevolley.ecs.Component;
 
 /**
@@ -11,7 +12,7 @@ public class PlayerComponent implements Component {
     private double size;   // 碰撞半径/边长
 
     public PlayerComponent() {
-        this(200, 32);
+        this(GameConfig.PLAYER_SPEED, GameConfig.PLAYER_SIZE);
     }
 
     public PlayerComponent(double speed, double size) {

@@ -9,6 +9,7 @@ import org.example.rougevolley.ecs.Entity;
 import org.example.rougevolley.ecs.components.EnemyComponent;
 import org.example.rougevolley.ecs.components.HealthComponent;
 import org.example.rougevolley.ecs.components.PlayerComponent;
+import org.example.rougevolley.entity.EntityFactory;
 
 /**
  * 伤害系统 —— 子弹与敌人的碰撞检测、伤害结算、击杀处理
@@ -36,7 +37,8 @@ public final class DamageSystem {
 
             // 取出子弹伤害（由 EntityFactory.createBullet 写入 userData）
             Object userData = bullet.getUserData();
-            if (!(userData instanceof Double damage)) continue;
+            if (!(userData instanceof EntityFactory.BulletData bulletData)) continue;
+            double damage = bulletData.damage();
 
             double bulletX = bullet.getX();
             double bulletY = bullet.getY();
@@ -68,8 +70,10 @@ public final class DamageSystem {
 
                     // 敌人死亡
                     if (health != null && health.isDead()) {
+                        enemy.setActive(false);
                         log.info("Enemy destroyed");
                         com.almasb.fxgl.dsl.FXGL.getEventBus().fireEvent(new Event(GameEvent.ENTITY_KILLED_EVENT));
+                        com.almasb.fxgl.dsl.FXGL.getEventBus().fireEvent(new Event(GameEvent.ENTITY_DESTROYED_EVENT));
                     }
 
                     // 子弹已销毁，跳出内层循环

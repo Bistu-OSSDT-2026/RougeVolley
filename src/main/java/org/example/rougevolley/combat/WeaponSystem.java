@@ -61,7 +61,9 @@ public final class WeaponSystem {
         double baseAngle = Math.toDegrees(Math.atan2(aimDy, aimDx));
 
         // 玩家尺寸偏移（子弹从玩家中心发射）
-        double halfSize = player.getComponent(PlayerComponent.class).get().getSize() / 2.0;
+        PlayerComponent pc = player.getComponent(PlayerComponent.class).orElse(null);
+        if (pc == null) return;
+        double halfSize = pc.getSize() / 2.0;
 
         // 按 bulletCount 生成弹丸
         for (int i = 0; i < weapon.getBulletCount(); i++) {
@@ -79,7 +81,8 @@ public final class WeaponSystem {
                 player.getX() + halfSize - GameConfig.BULLET_SIZE / 2.0,
                 player.getY() + halfSize - GameConfig.BULLET_SIZE / 2.0,
                 vx, vy,
-                weapon.getBulletDamage()
+                weapon.getBulletDamage(),
+                gameState.getElapsedTime()
             );
             gameState.registerEntity(bullet);
 
