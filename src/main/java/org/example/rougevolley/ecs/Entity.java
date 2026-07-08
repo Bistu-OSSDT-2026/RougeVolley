@@ -13,6 +13,7 @@ import java.util.*;
 public class Entity {
 
     private final String uuid;
+    private final EntityType type;
     private final Map<Class<? extends Component>, Component> components = new LinkedHashMap<>();
 
     private Point2D position;
@@ -21,13 +22,15 @@ public class Entity {
 
     /**
      * @param position 实体初始位置
+     * @param type     实体类型（用于批量过滤和语义分类）
      */
-    public Entity(Point2D position) {
+    public Entity(Point2D position, EntityType type) {
         if (position == null) {
             throw new IllegalArgumentException("Entity position must not be null");
         }
         this.uuid = UUID.randomUUID().toString();
         this.position = position;
+        this.type = Objects.requireNonNull(type, "Entity type must not be null");
     }
 
     // ── 组件管理 ──
@@ -105,6 +108,10 @@ public class Entity {
 
     public String getUuid() {
         return uuid;
+    }
+
+    public EntityType getType() {
+        return type;
     }
 
     public Point2D getPosition() {

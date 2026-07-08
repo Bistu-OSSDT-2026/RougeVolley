@@ -3,6 +3,7 @@ package org.example.rougevolley.entity;
 import javafx.geometry.Point2D;
 import org.example.rougevolley.config.GameConfig;
 import org.example.rougevolley.ecs.Entity;
+import org.example.rougevolley.ecs.EntityType;
 import org.example.rougevolley.ecs.components.*;
 
 /**
@@ -23,7 +24,7 @@ public final class EntityFactory {
      * @return 携带 Player + Health + Movement + Weapon 组件的实体
      */
     public static Entity createPlayer(double x, double y) {
-        Entity player = new Entity(new Point2D(x, y));
+        Entity player = new Entity(new Point2D(x, y), EntityType.PLAYER);
 
         player.addComponent(new PlayerComponent(
             GameConfig.PLAYER_SPEED,
@@ -46,7 +47,7 @@ public final class EntityFactory {
      * @return 携带 Enemy + Health + Movement 组件的实体
      */
     public static Entity createEnemy(double x, double y, double hp, double speed) {
-        Entity enemy = new Entity(new Point2D(x, y));
+        Entity enemy = new Entity(new Point2D(x, y), EntityType.ENEMY_NORMAL);
 
         enemy.addComponent(new EnemyComponent(
             speed,
@@ -77,7 +78,7 @@ public final class EntityFactory {
      * @return 携带 Movement 组件的子弹实体
      */
     public static Entity createBullet(double x, double y, double vx, double vy, double damage) {
-        Entity bullet = new Entity(new Point2D(x, y));
+        Entity bullet = new Entity(new Point2D(x, y), EntityType.BULLET);
 
         MovementComponent move = new MovementComponent();
         move.setVelocity(vx, vy);
@@ -99,7 +100,7 @@ public final class EntityFactory {
      * @param value 道具数值（如回复量）
      */
     public static Entity createPickup(double x, double y, String type, double value) {
-        Entity pickup = new Entity(new Point2D(x, y));
+        Entity pickup = new Entity(new Point2D(x, y), EntityType.PICKUP);
         pickup.setUserData(new PickupData(type, value));
         return pickup;
     }
