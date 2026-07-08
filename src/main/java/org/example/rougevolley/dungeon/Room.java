@@ -2,7 +2,6 @@ package org.example.rougevolley.dungeon;
 
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
-import org.example.rougevolley.config.GameConfig;
 import org.example.rougevolley.ecs.Entity;
 import org.example.rougevolley.ecs.components.HealthComponent;
 import org.example.rougevolley.entity.EntityFactory;
@@ -53,8 +52,8 @@ public class Room {
         this.gridY = gridY;
 
         // 世界像素偏移 = grid * 房间像素尺寸
-        int roomPixelW = template.getWidthTiles() * GameConfig.TILE_SIZE;
-        int roomPixelH = template.getHeightTiles() * GameConfig.TILE_SIZE;
+        int roomPixelW = template.getWidthTiles() * template.getTileWidth();
+        int roomPixelH = template.getHeightTiles() * template.getTileHeight();
         this.worldX = gridX * roomPixelW;
         this.worldY = gridY * roomPixelH;
 
@@ -135,6 +134,11 @@ public class Room {
 
     /** 设置门的连接状态 */
     public void setDoorConnected(String direction, boolean connected) {
+        if (!doorConnected.containsKey(direction)) {
+            throw new IllegalArgumentException(
+                "Room " + template.getId() + " has no door in direction '" + direction +
+                "'. Valid directions: " + doorConnected.keySet());
+        }
         doorConnected.put(direction, connected);
     }
 

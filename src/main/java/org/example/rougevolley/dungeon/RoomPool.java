@@ -43,8 +43,10 @@ public class RoomPool {
             if (!loaded.isEmpty()) {
                 return new RoomPool(loaded, rng);
             }
-        } catch (Exception ignored) {
-            // 资源不可用，使用内建模板
+        } catch (Exception e) {
+            System.getLogger(RoomPool.class.getName()).log(
+                System.Logger.Level.WARNING,
+                "Failed to load RoomTemplates.json, falling back to built-in templates", e);
         }
 
         // 回退：使用内建模板

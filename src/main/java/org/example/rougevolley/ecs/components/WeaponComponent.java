@@ -28,6 +28,9 @@ public class WeaponComponent implements Component {
     /** 上次开火时间戳（秒），用于冷却判定 */
     private double lastFireTime;
 
+    /** 哨兵值：表示武器从未开火，确保首次射击立即可用 */
+    private static final double NEVER_FIRED = -Double.MAX_VALUE / 2;
+
     public WeaponComponent() {
         this(
             GameConfig.WEAPON_FIRE_RATE,
@@ -45,7 +48,7 @@ public class WeaponComponent implements Component {
         this.spreadAngle = spreadAngle;
         this.bulletSpeed = bulletSpeed;
         this.bulletDamage = bulletDamage;
-        this.lastFireTime = -999.0;
+        this.lastFireTime = NEVER_FIRED;
     }
 
     /** 是否可以开火 */

@@ -9,6 +9,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import org.example.rougevolley.config.GameConfig;
 
 /**
  * 菜单工厂 —— 开始界面与 GameOver 界面
@@ -72,7 +73,7 @@ public final class MenuFactory {
         StackPane root = new StackPane();
         root.setPickOnBounds(true);
 
-        Rectangle dim = new Rectangle(1280, 720);
+        Rectangle dim = new Rectangle(GameConfig.VIEWPORT_WIDTH, GameConfig.VIEWPORT_HEIGHT);
         dim.setFill(Color.rgb(0, 0, 0, 0.75));
         root.getChildren().add(dim);
         return root;

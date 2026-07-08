@@ -14,6 +14,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class GameState {
 
     private final long seed;
+    private final Random random;
     private final List<Entity> entities = new CopyOnWriteArrayList<>();
 
     private Entity player;
@@ -25,10 +26,14 @@ public class GameState {
 
     public GameState(long seed) {
         this.seed = seed;
+        this.random = new Random(seed);
         this.paused = false;
         this.gameOver = false;
         this.elapsedTime = 0;
     }
+
+    /** 返回全局确定性随机源（由种子派生） */
+    public Random getRandom() { return random; }
 
     // ── 实体管理 ──
 
@@ -83,11 +88,14 @@ public class GameState {
     }
 
     /**
-     * 清空所有实体（重新开始或返回主菜单时使用）
+     * 清空所有实体（重新开始或返回主菜单时使用）。
+     * 同步执行以确保 player 和 entities 同时变更。
      */
     public void clearAllEntities() {
-        entities.clear();
-        player = null;
+        synchronized (this) {
+            entities.clear();
+            player = null;
+        }
     }
 
     // ── Getters / Setters ──

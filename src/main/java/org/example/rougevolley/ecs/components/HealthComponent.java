@@ -1,5 +1,6 @@
 package org.example.rougevolley.ecs.components;
 
+import org.example.rougevolley.config.GameConfig;
 import org.example.rougevolley.ecs.Component;
 import org.example.rougevolley.ecs.Entity;
 
@@ -34,7 +35,7 @@ public class HealthComponent implements Component {
 
     /** 完全恢复并提升上限 */
     public void restoreAndBuff(double buffAmount) {
-        maxHealth += buffAmount;
+        maxHealth = Math.min(maxHealth + buffAmount, GameConfig.PLAYER_MAX_HEALTH_CAP);
         currentHealth = maxHealth;
     }
 
@@ -48,7 +49,10 @@ public class HealthComponent implements Component {
 
     public double getCurrentHealth() { return currentHealth; }
     public double getMaxHealth() { return maxHealth; }
-    public void setMaxHealth(double maxHealth) { this.maxHealth = maxHealth; }
+    public void setMaxHealth(double maxHealth) {
+        this.maxHealth = maxHealth;
+        this.currentHealth = Math.min(this.currentHealth, maxHealth);
+    }
 
     /** 返回血量百分比 [0, 1] */
     public double getHealthPercent() {

@@ -184,7 +184,7 @@ public class RoomTemplate {
                 for (int j = 0; j < objects.length(); j++) {
                     JSONObject obj = objects.getJSONObject(j);
                     String objName = obj.optString("name", "");
-                    String objType = obj.optString("type", "");
+                    String objType = obj.optString("type", obj.optString("class", ""));
 
                     switch (layerName) {
                         case "doors" -> {
@@ -616,10 +616,27 @@ public class RoomTemplate {
     }
 
     private static int[][] parseTileLayer(JSONObject layer, int mapW, int mapH) {
+        // 检测不支持的编码格式（仅支持 CSV/JSON 数组）
+        String encoding = layer.optString("encoding", "csv");
+        if (!"csv".equals(encoding)) {
+            throw new UnsupportedOperationException(
+                "Tile layer uses unsupported encoding: " + encoding +
+                ". Please export Tiled maps without compression/base64.");
+        }
+        String compression = layer.optString("compression", "");
+        if (!compression.isEmpty()) {
+            throw new UnsupportedOperationException(
+                "Tile layer uses unsupported compression: " + compression +
+                ". Please export Tiled maps without compression.");
+        }
+
         JSONArray data = layer.getJSONArray("data");
         int[][] grid = new int[mapH][mapW];
         for (int i = 0; i < data.length() && i < mapW * mapH; i++) {
             int gid = data.getInt(i);
+            // 清除 Tiled GID 高 4 位中的翻转/旋转标志
+            // 0x80000000=水平翻转, 0x40000000=垂直翻转, 0x20000000=对角线翻转
+            gid = gid & 0x0FFFFFFF;
             int row = i / mapW;
             int col = i % mapW;
             grid[row][col] = gid;

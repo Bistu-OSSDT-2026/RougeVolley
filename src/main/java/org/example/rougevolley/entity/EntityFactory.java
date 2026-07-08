@@ -74,20 +74,20 @@ public final class EntityFactory {
      * @param y      初始 Y
      * @param vx     X 方向速度
      * @param vy     Y 方向速度
-     * @param damage 伤害值
+     * @param damage   伤害值
+     * @param spawnTime 生成时间戳（用于生命周期管理）
      * @return 携带 Movement 组件的子弹实体
      */
-    public static Entity createBullet(double x, double y, double vx, double vy, double damage) {
+    public static Entity createBullet(double x, double y, double vx, double vy, double damage, double spawnTime) {
         Entity bullet = new Entity(new Point2D(x, y), EntityType.BULLET);
 
         MovementComponent move = new MovementComponent();
         move.setVelocity(vx, vy);
         bullet.addComponent(move);
 
-        // 用 HealthComponent 存储伤害值（复用现有组件，currentHealth = 伤害）
-        bullet.setUserData(damage);
+        // 子弹数据：伤害 + 生成时间戳（用于生命周期管理）
+        bullet.setUserData(new BulletData(damage, spawnTime));
 
-        // 子弹生命周期由 WeaponSystem 管理，此处仅创建
         return bullet;
     }
 
@@ -101,10 +101,14 @@ public final class EntityFactory {
      */
     public static Entity createPickup(double x, double y, String type, double value) {
         Entity pickup = new Entity(new Point2D(x, y), EntityType.PICKUP);
-        pickup.setUserData(new PickupData(type, value));
+        pickup.addComponent(new PickupComponent(type, value));
         return pickup;
     }
 
-    /** 道具数据（简单 POJO，不必要独立成 Component） */
+    /** @deprecated 使用 PickupComponent 替代 */
+    @Deprecated
     public record PickupData(String type, double value) {}
+
+    /** 子弹数据（伤害 + 生成时间戳，供生命周期管理用） */
+    public record BulletData(double damage, double spawnTime) {}
 }

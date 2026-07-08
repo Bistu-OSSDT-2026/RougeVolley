@@ -21,10 +21,11 @@ import org.example.rougevolley.dungeon.RoomPool;
 import org.example.rougevolley.dungeon.RoomTemplate;
 import org.example.rougevolley.dungeon.TileRenderer;
 import org.example.rougevolley.ecs.Entity;
+import org.example.rougevolley.ecs.EntityType;
 import org.example.rougevolley.ecs.components.*;
 import org.example.rougevolley.combat.DamageSystem;
 import org.example.rougevolley.combat.WeaponSystem;
-import org.example.rougevolley.dungeon.*;
+import org.example.rougevolley.dungeon.DungeonGenerator;
 import org.example.rougevolley.entity.EntityFactory;
 import org.example.rougevolley.roguelike.UpgradeManager;
 import org.example.rougevolley.ui.GameUI;
@@ -53,7 +54,6 @@ public class RougeVolleyFXGL extends GameApplication {
     private double cameraX, cameraY;
 
     private TileRenderer tileRenderer;
-    private Room startRoom;
 
     private int frameCount;
     private double fpsAccumulator;
@@ -66,11 +66,11 @@ public class RougeVolleyFXGL extends GameApplication {
     private boolean upgradeTriggeredThisWave;
 
     private long sessionSeed;
+
     // ── 地牢系统 ──
     private List<Room> dungeonRooms;
     private Map<String, Room> dungeonMap;  // "col,row" → Room
     private Room currentRoom;
-    private TileRenderer tileRenderer;
 
     // ── 动态世界边界（由地牢生成后计算） ──
     private double worldMinX, worldMinY, worldMaxX, worldMaxY;
@@ -174,8 +174,24 @@ public class RougeVolleyFXGL extends GameApplication {
 
         handleInput(dt);
 
+        // 检测门碰撞与房间切换
+        checkDoorTransitions();
+
         gameState.updateEntities(dt);
         gameState.addTime(dt);
+
+        // ── 子弹生命周期过期检查 ──
+        double now = gameState.getElapsedTime();
+        for (Entity e : gameState.getEntities()) {
+            if (e.isActive() && e.getType() == EntityType.BULLET) {
+                Object ud = e.getUserData();
+                if (ud instanceof EntityFactory.BulletData bd) {
+                    if (now - bd.spawnTime() > GameConfig.BULLET_LIFETIME) {
+                        e.setActive(false);
+                    }
+                }
+            }
+        }
 
         DamageSystem.checkBulletEnemyCollisions(gameState);
 
@@ -190,7 +206,7 @@ public class RougeVolleyFXGL extends GameApplication {
         syncRenderNodes();
 
         if (tileRenderer != null) {
-            tileRenderer.sync(FXGL.getGameScene().getViewport().getXY());
+            tileRenderer.sync(new com.almasb.fxgl.core.math.Vec2(FXGL.getGameScene().getViewport().getOrigin()));
         }
 
         updateCamera(dt);
@@ -217,59 +233,11 @@ public class RougeVolleyFXGL extends GameApplication {
         gameState.setGameOver(false);
         gameState.setPaused(false);
 
-        loadStartRoom();
-        spawnPlayerInRoom();
-        ensureEnemyRenderNodes();
-        spawnTestEnemies();
-
-        tileRenderer = new TileRenderer();
-        tileRenderer.buildForRoom(startRoom);
-        log.info("TileRenderer built: " + tileRenderer.getTileCount() + " tiles");
-
-        cameraX = clamp(player.getX() - GameConfig.VIEWPORT_WIDTH / 2.0,
-            0, GameConfig.WORLD_WIDTH - GameConfig.VIEWPORT_WIDTH);
-        cameraY = clamp(player.getY() - GameConfig.VIEWPORT_HEIGHT / 2.0,
-            0, GameConfig.WORLD_HEIGHT - GameConfig.VIEWPORT_HEIGHT);
-        applyCameraPosition();
-
-        log.info("New game started. Player at (" + player.getX() + ", " + player.getY() + ")");
-    }
-
-    private void returnToMainMenu() {
-        clearWorld();
-        gameStarted = false;
-        player = null;
-        startRoom = null;
-
-        sessionSeed = ThreadLocalRandom.current().nextLong();
-        gameState = new GameState(sessionSeed);
-        upgradeManager = new UpgradeManager(sessionSeed);
-        gameUI.bindGameState(gameState, upgradeManager);
-        gameUI.showStartMenu();
-
-        log.info("Returned to main menu.");
-    }
-
-    private void loadStartRoom() {
-        RoomPool pool = RoomPool.loadDefault();
-        RoomTemplate template = pool.getRandom();
-        startRoom = new Room(template, 0, 0);
-        startRoom.activate(gameState);
-        log.info("Room loaded: " + template.getName()
-            + " (" + template.getWidthTiles() + "x" + template.getHeightTiles() + " tiles)");
-    }
-
-    private void spawnPlayerInRoom() {
-        Point2D spawn = startRoom.getTemplate().getPlayerSpawn();
-        double spawnX = startRoom.getWorldX() + (spawn != null ? spawn.getX() : GameConfig.WORLD_WIDTH / 2.0);
-        double spawnY = startRoom.getWorldY() + (spawn != null ? spawn.getY() : GameConfig.WORLD_HEIGHT / 2.0);
-
-        player = EntityFactory.createPlayer(spawnX, spawnY);
-        // ── 生成地牢 ──
-        Random dungeonRng = new Random(seed);
-        RoomPool roomPool = RoomPool.loadDefault(dungeonRng);
-        DungeonGenerator generator = new DungeonGenerator(roomPool, dungeonRng);
-        dungeonRooms = generator.generate();
+        // ── 生成地牢（使用全局确定性随机源） ──
+        Random gameRng = gameState.getRandom();
+        RoomPool roomPool = RoomPool.loadDefault(gameRng);
+        DungeonGenerator dungeonGenerator = new DungeonGenerator(roomPool, gameRng);
+        dungeonRooms = dungeonGenerator.generate();
 
         // 构建网格坐标查找表
         dungeonMap = new HashMap<>();
@@ -281,6 +249,35 @@ public class RougeVolleyFXGL extends GameApplication {
         // 计算动态世界边界
         computeWorldBounds();
 
+        spawnPlayerInRoom();
+        ensureEnemyRenderNodes();
+        spawnTestEnemies();
+
+        cameraX = clamp(player.getX() - GameConfig.VIEWPORT_WIDTH / 2.0,
+            worldMinX, worldMaxX - GameConfig.VIEWPORT_WIDTH);
+        cameraY = clamp(player.getY() - GameConfig.VIEWPORT_HEIGHT / 2.0,
+            worldMinY, worldMaxY - GameConfig.VIEWPORT_HEIGHT);
+        applyCameraPosition();
+
+        log.info("New game started. Player at (" + player.getX() + ", " + player.getY() + ")");
+    }
+
+    private void returnToMainMenu() {
+        clearWorld();
+        gameStarted = false;
+        player = null;
+        currentRoom = null;
+
+        sessionSeed = ThreadLocalRandom.current().nextLong();
+        gameState = new GameState(sessionSeed);
+        upgradeManager = new UpgradeManager(sessionSeed);
+        gameUI.bindGameState(gameState, upgradeManager);
+        gameUI.showStartMenu();
+
+        log.info("Returned to main menu.");
+    }
+
+    private void spawnPlayerInRoom() {
         // ── 激活起始房间 (0,0) ──
         currentRoom = dungeonMap.get("0,0");
         if (currentRoom == null) {
@@ -345,8 +342,36 @@ public class RougeVolleyFXGL extends GameApplication {
             }
         }
 
+        log.info("RougeVolley initialized. Dungeon: " + dungeonRooms.size() + " rooms. Player at ("
+            + player.getX() + ", " + player.getY() + ")");
+
+        // 触发地牢生成事件
+        FXGL.getEventBus().fireEvent(new Event(GameEvent.DUNGEON_GENERATED_EVENT));
+    }
+
+    private void clearWorld() {
+        if (gameState != null) {
+            for (Entity e : new ArrayList<>(gameState.getEntities())) {
+                javafx.scene.Node node = renderNodes.remove(e.getUuid());
+                if (node != null) {
+                    FXGL.getGameScene().removeUINode(node);
+                }
+                e.destroy();
+            }
+            gameState.clearAllEntities();
+        }
+
+        renderNodes.clear();
+
+        // ── Tile 渲染清理 ──
+        if (tileRenderer != null) {
+            tileRenderer.clear();
+            tileRenderer = null;
+        }
+    }
+
     private void spawnTestEnemies() {
-        Random rng = new Random(gameState.getSeed());
+        Random rng = gameState.getRandom();
         int count = GameConfig.TEST_ENEMY_COUNT;
         int spawned = 0;
         for (int i = 0; i < count; i++) {
@@ -355,12 +380,6 @@ public class RougeVolleyFXGL extends GameApplication {
 
             if (Math.abs(x - player.getX()) < GameConfig.SPAWN_SAFE_RADIUS
                 && Math.abs(y - player.getY()) < GameConfig.SPAWN_SAFE_RADIUS) continue;
-        // ── 初始化摄像机位置 ──
-        cameraX = clamp(player.getX() - GameConfig.VIEWPORT_WIDTH / 2.0,
-            worldMinX, worldMaxX - GameConfig.VIEWPORT_WIDTH);
-        cameraY = clamp(player.getY() - GameConfig.VIEWPORT_HEIGHT / 2.0,
-            worldMinY, worldMaxY - GameConfig.VIEWPORT_HEIGHT);
-        applyCameraPosition();
 
             Entity enemy = EntityFactory.createDefaultEnemy(x, y);
             gameState.registerEntity(enemy);
@@ -376,11 +395,6 @@ public class RougeVolleyFXGL extends GameApplication {
         }
         hadEnemies = hadEnemies || spawned > 0;
         log.info("Spawned " + spawned + " test enemies");
-        log.info("RougeVolley initialized. Dungeon: " + dungeonRooms.size() + " rooms. Player at ("
-            + player.getX() + ", " + player.getY() + ")");
-
-        // 触发地牢生成事件
-        FXGL.getEventBus().fireEvent(new Event(GameEvent.DUNGEON_GENERATED));
     }
 
     private void checkRoomCleared() {
@@ -404,20 +418,6 @@ public class RougeVolleyFXGL extends GameApplication {
             gameUI.showGameOver();
             FXGL.getEventBus().fireEvent(new Event(GameEvent.GAME_OVER_EVENT));
             log.info("Player died — Game Over");
-        // ── 检测门碰撞与房间切换 ──
-        checkDoorTransitions();
-
-        // ── 检查房间是否已清空 ──
-        if (currentRoom != null) {
-            currentRoom.checkAndMarkCleared();
-        }
-
-        // ── 同步渲染节点位置 ──
-        syncRenderNodes();
-
-        // ── Tile 渲染同步（视口偏移） ──
-        if (tileRenderer != null) {
-            tileRenderer.sync(FXGL.getGameScene().getViewport().getXY());
         }
     }
 
@@ -584,7 +584,12 @@ public class RougeVolleyFXGL extends GameApplication {
         }
 
         // ── 触发房间进入事件 ──
-        FXGL.getEventBus().fireEvent(new Event(GameEvent.ROOM_ENTERED));
+        FXGL.getEventBus().fireEvent(new Event(GameEvent.ROOM_ENTERED_EVENT));
+
+        // ── 重置房间状态标志，允许新房间触发升级 ──
+        hadEnemies = false;
+        upgradeTriggeredThisWave = false;
+        ensureEnemyRenderNodes();
 
         log.info("Entered room " + target.getTemplate().getName() + " @(" + targetGx + "," + targetGy + ")");
     }
@@ -735,6 +740,10 @@ public class RougeVolleyFXGL extends GameApplication {
             ));
         }
     }
+
+    // ============================================================
+    //  测试工具
+    // ============================================================
 
     // ============================================================
     //  工具

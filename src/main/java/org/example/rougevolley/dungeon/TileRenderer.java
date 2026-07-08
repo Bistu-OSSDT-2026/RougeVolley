@@ -43,10 +43,12 @@ public class TileRenderer {
     private boolean visible = true;
 
     // 调色板（与现有项目风格一致）
-    private static final Color COLOR_FLOOR   = Color.rgb(48, 48, 58);
-    private static final Color COLOR_WALL    = Color.rgb(70, 70, 85);
-    private static final Color COLOR_WALL_BORDER = Color.rgb(55, 55, 70);
-    private static final Color COLOR_DOOR    = Color.rgb(90, 80, 60);
+    private static final Color COLOR_FLOOR        = Color.rgb(48, 48, 58);
+    private static final Color COLOR_WALL         = Color.rgb(70, 70, 85);
+    private static final Color COLOR_WALL_BORDER  = Color.rgb(55, 55, 70);
+    private static final Color COLOR_DOOR         = Color.rgb(90, 80, 60);
+    private static final Color COLOR_FLOOR_STROKE = Color.rgb(38, 38, 48);
+    private static final Color COLOR_DOOR_STROKE  = Color.rgb(120, 100, 70);
     private static final double WALL_STROKE = 1.0;
 
     // ============================================================
@@ -80,7 +82,7 @@ public class TileRenderer {
                 // --- 地板 ---
                 if (ground[row][col] == RoomTemplate.GID_FLOOR) {
                     Rectangle floor = new Rectangle(T, T, COLOR_FLOOR);
-                    floor.setStroke(Color.rgb(38, 38, 48));
+                    floor.setStroke(COLOR_FLOOR_STROKE);
                     floor.setStrokeWidth(0.5);
                     addTile(floor, tileWorldX, tileWorldY);
                 }
@@ -101,7 +103,7 @@ public class TileRenderer {
             double doorWorldY = baseY + door.y;
             Rectangle doorRect = new Rectangle(door.width, door.height, COLOR_DOOR);
             doorRect.setOpacity(0.45);
-            doorRect.setStroke(Color.rgb(120, 100, 70));
+            doorRect.setStroke(COLOR_DOOR_STROKE);
             doorRect.setStrokeWidth(0.5);
             addTile(doorRect, doorWorldX, doorWorldY);
         }

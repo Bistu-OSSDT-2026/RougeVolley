@@ -10,7 +10,9 @@ public class UpgradeOption {
     public enum Type {
         FIRE_RATE,
         BULLET_COUNT,
-        HEALTH_RESTORE
+        HEALTH_RESTORE,
+        DAMAGE,
+        BULLET_SPEED
     }
 
     private final String id;

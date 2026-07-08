@@ -67,7 +67,9 @@ public class GameUI {
         this.gameState = gameState;
         this.upgradeManager = upgradeManager;
         upgradeVisible = false;
-        upgradeOverlay.setVisible(false);
+        if (upgradeOverlay != null) {
+            upgradeOverlay.setVisible(false);
+        }
     }
 
     /**

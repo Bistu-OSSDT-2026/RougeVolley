@@ -52,17 +52,21 @@ public class DungeonGenerator {
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
                 Room room = grid[r][c];
-                // 右边邻居 → E ↔ W
+                // 右边邻居 → E ↔ W（仅当两个房间都有对应方向的门）
                 if (c + 1 < cols) {
                     Room right = grid[r][c + 1];
-                    room.setDoorConnected("E", true);
-                    right.setDoorConnected("W", true);
+                    if (room.getDoorDirections().contains("E") && right.getDoorDirections().contains("W")) {
+                        room.setDoorConnected("E", true);
+                        right.setDoorConnected("W", true);
+                    }
                 }
-                // 下方邻居 → S ↔ N
+                // 下方邻居 → S ↔ N（仅当两个房间都有对应方向的门）
                 if (r + 1 < rows) {
                     Room down = grid[r + 1][c];
-                    room.setDoorConnected("S", true);
-                    down.setDoorConnected("N", true);
+                    if (room.getDoorDirections().contains("S") && down.getDoorDirections().contains("N")) {
+                        room.setDoorConnected("S", true);
+                        down.setDoorConnected("N", true);
+                    }
                 }
             }
         }
