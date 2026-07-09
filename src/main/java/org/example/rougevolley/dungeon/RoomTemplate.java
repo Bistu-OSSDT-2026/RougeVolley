@@ -491,8 +491,7 @@ public class RoomTemplate {
         for (int r = 0; r < H; r++) { walls[r][0] = GID_WALL; walls[r][W - 1] = GID_WALL; }
 
         List<DoorDef> doors = List.of(
-            new DoorDef("S", 9 * T, 14 * T, 2 * T, T),
-            new DoorDef("E", 19 * T, 3 * T, T, 2 * T)
+            new DoorDef("S", 9 * T, 14 * T, 2 * T, T)
         );
         carveDoorGaps(walls, doors, T);
 
