@@ -37,7 +37,7 @@ mvn javafx:run
 # 打包为 JAR
 mvn clean package
 ```
--直接安装release也可运行
+-直接安装release也可运行  
 -也可直接在 IDE 中运行 `org.example.Main` 主类。
 
 ---
