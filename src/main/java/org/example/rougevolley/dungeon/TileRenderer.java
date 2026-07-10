@@ -57,9 +57,12 @@ public class TileRenderer {
     private static final Color COLOR_FLOOR        = Color.rgb(105, 95, 82);
     private static final Color COLOR_WALL         = Color.rgb(38, 35, 42);
     private static final Color COLOR_WALL_BORDER  = Color.rgb(22, 20, 28);
-    private static final Color COLOR_DOOR         = Color.rgb(175, 95, 55);
-    private static final Color COLOR_FLOOR_STROKE = Color.rgb(88, 80, 70);
-    private static final Color COLOR_DOOR_STROKE  = Color.rgb(210, 130, 80);
+    private static final Color COLOR_FLOOR_STROKE      = Color.rgb(88, 80, 70);
+    private static final Color COLOR_DOOR_STROKE       = Color.rgb(210, 130, 80);
+    // 传送门颜色（活跃/断开）
+    private static final Color COLOR_TELEPORT_ACTIVE   = Color.rgb(100, 180, 255);  // 青蓝光晕
+    private static final Color COLOR_DOOR_DISCONNECTED = Color.rgb(80, 50, 40);    // 暗色，不活跃
+    private static final Color COLOR_TELEPORT_STROKE   = Color.rgb(180, 220, 255); // 亮青边框
     private static final double WALL_STROKE = 2.0;
 
     // ── 各房间类型地板色相偏移（增强房间辨识度） ──
@@ -172,19 +175,26 @@ public class TileRenderer {
         for (RoomTemplate.DoorDef door : template.getDoors()) {
             double doorWorldX = baseX + door.x;
             double doorWorldY = baseY + door.y;
+
+            // 检查该门是否为活跃传送门
+            boolean isActiveTeleport = room.canPassThrough(door.direction);
+
             Node doorNode;
             if (doorTexture != null && !doorTexture.isError()) {
                 ImageView doorView = new ImageView(doorTexture);
                 doorView.setFitWidth(door.width);
                 doorView.setFitHeight(door.height);
                 doorView.setSmooth(false);
-                doorView.setOpacity(0.9);
+                // 活跃传送门用高透明度，断开用低透明度
+                doorView.setOpacity(isActiveTeleport ? 1.0 : 0.35);
                 doorNode = doorView;
             } else {
-                Rectangle doorRect = new Rectangle(door.width, door.height, COLOR_DOOR);
-                doorRect.setOpacity(0.75);
-                doorRect.setStroke(COLOR_DOOR_STROKE);
-                doorRect.setStrokeWidth(2.5);
+                Color fillColor   = isActiveTeleport ? COLOR_TELEPORT_ACTIVE : COLOR_DOOR_DISCONNECTED;
+                Color strokeColor = isActiveTeleport ? COLOR_TELEPORT_STROKE : COLOR_DOOR_STROKE;
+                Rectangle doorRect = new Rectangle(door.width, door.height, fillColor);
+                doorRect.setOpacity(isActiveTeleport ? 0.85 : 0.4);
+                doorRect.setStroke(strokeColor);
+                doorRect.setStrokeWidth(isActiveTeleport ? 3.0 : 1.5);
                 doorRect.setArcWidth(4);
                 doorRect.setArcHeight(4);
                 doorNode = doorRect;
