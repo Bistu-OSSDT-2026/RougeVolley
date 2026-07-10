@@ -28,6 +28,7 @@ import org.example.rougevolley.ecs.components.*;
 import org.example.rougevolley.combat.DamageSystem;
 import org.example.rougevolley.combat.WeaponSystem;
 import org.example.rougevolley.dungeon.DungeonGenerator;
+import org.example.rougevolley.dungeon.TeleportMapping;
 import org.example.rougevolley.entity.EntityFactory;
 import org.example.rougevolley.roguelike.UpgradeManager;
 import org.example.rougevolley.ui.GameUI;
@@ -76,6 +77,7 @@ public class RougeVolleyFXGL extends GameApplication {
     private List<Room> dungeonRooms;
     private Map<String, Room> dungeonMap;  // "col,row" → Room
     private Room currentRoom;
+    private TeleportMapping teleportMapping;  // 传送门映射
 
     // ── 动态世界边界（由地牢生成后计算） ──
     private double worldMinX, worldMinY, worldMaxX, worldMaxY;
@@ -293,6 +295,24 @@ public class RougeVolleyFXGL extends GameApplication {
         RoomPool roomPool = RoomPool.loadDefault(gameRng);
         DungeonGenerator dungeonGenerator = new DungeonGenerator(roomPool, gameRng);
         dungeonRooms = dungeonGenerator.generate();
+
+        // ── 构建传送门映射（替代网格相邻连接） ──
+        // 1. 重置所有门的连接状态（传送映射将重新分配）
+        for (Room room : dungeonRooms) {
+            for (String dir : room.getDoorDirections()) {
+                room.setDoorConnected(dir, false);
+            }
+        }
+        // 2. 构建传送映射（基于种子的确定性 RNG）
+        teleportMapping = TeleportMapping.build(dungeonRooms, gameRng);
+        // 3. 标记有有效传送目标的房间为已连接
+        for (Room room : dungeonRooms) {
+            for (String dir : room.getDoorDirections()) {
+                if (teleportMapping.isDoorConnected(room.getId(), dir)) {
+                    room.setDoorConnected(dir, true);
+                }
+            }
+        }
 
         // 构建网格坐标查找表
         dungeonMap = new HashMap<>();
@@ -579,29 +599,22 @@ public class RougeVolleyFXGL extends GameApplication {
     }
 
     /**
-     * 沿指定方向切换到相邻房间。
+     * 通过传送门切换到目标房间。
      * <p>
-     * 流程：停用当前房间 → 清除 tiles → 激活目标房间 → 重建 tiles →
-     * 将玩家传送到目标房间的对面门位置。
+     * 流程：查询 TeleportMapping → 停用当前房间 → 清除 tiles →
+     * 激活目标房间 → 重建 tiles → 将玩家传送到目标房间的到达位置。
      */
     private void transitionToRoom(String direction) {
-        // 计算目标房间网格坐标
-        int dx = 0, dy = 0;
-        switch (direction) {
-            case "N" -> dy = -1;
-            case "S" -> dy = 1;
-            case "W" -> dx = -1;
-            case "E" -> dx = 1;
-            default -> { return; }
+        // 查询传送映射获取目标
+        TeleportMapping.TeleportTarget target = teleportMapping.getTarget(currentRoom.getId(), direction);
+        if (target == null) {
+            log.warning("Teleport target missing for " + currentRoom + " door " + direction);
+            return;
         }
+        Room targetRoom = target.getDestinationRoom();
 
-        int targetGx = currentRoom.getGridX() + dx;
-        int targetGy = currentRoom.getGridY() + dy;
-        String key = targetGx + "," + targetGy;
-        Room target = dungeonMap.get(key);
-        if (target == null) return;
-
-        log.info("Transitioning " + direction + " → room (" + targetGx + "," + targetGy + ")");
+        log.info("Teleporting " + direction + " → " + targetRoom.getTemplate().getName()
+                 + " @(" + targetRoom.getGridX() + "," + targetRoom.getGridY() + ")");
 
         // ── 先移除当前房间实体的渲染节点（必须在 deactivate 前，因为 deactivate 会从实体列表移除敌人） ──
         for (Entity e : gameState.getEntities()) {
@@ -621,11 +634,11 @@ public class RougeVolleyFXGL extends GameApplication {
         }
 
         // ── 激活目标房间 ──
-        target.activate(gameState);
+        targetRoom.activate(gameState);
         if (tileRenderer != null) {
-            tileRenderer.buildForRoom(target);
+            tileRenderer.buildForRoom(targetRoom);
         }
-        currentRoom = target;
+        currentRoom = targetRoom;
 
         // ── 为新生实体创建渲染节点 ──
         for (Entity e : gameState.getEntities()) {
@@ -639,23 +652,9 @@ public class RougeVolleyFXGL extends GameApplication {
             node.toFront();
         }
 
-        // ── 将玩家传送到目标房间的对面门位置 ──
-        String oppositeDir = getOppositeDirection(direction);
-        var oppositeDoor = target.getDoorWorldBounds(oppositeDir);
-        if (oppositeDoor != null) {
-            // 放置在门内侧一点，防止立即再次触发切换
-            double spawnX = oppositeDoor.getMinX() + oppositeDoor.getWidth() / 2.0;
-            double spawnY = oppositeDoor.getMinY() + oppositeDoor.getHeight() / 2.0;
-            // 推向房间内侧足够远，防止立即重新触发门碰撞
-            double pushIn = GameConfig.PLAYER_SIZE * 2 + GameConfig.TILE_SIZE;
-            switch (oppositeDir) {
-                case "N" -> spawnY += pushIn;
-                case "S" -> spawnY -= pushIn;
-                case "W" -> spawnX += pushIn;
-                case "E" -> spawnX -= pushIn;
-            }
-            player.setPosition(new Point2D(spawnX, spawnY));
-        }
+        // ── 将玩家传送到目标房间的到达位置 ──
+        Point2D arrivalPos = TeleportMapping.getArrivalPosition(targetRoom, target.getArrivalDirection());
+        player.setPosition(arrivalPos);
 
         // ── 触发房间进入事件 ──
         FXGL.getEventBus().fireEvent(new Event(GameEvent.ROOM_ENTERED_EVENT));
@@ -667,20 +666,8 @@ public class RougeVolleyFXGL extends GameApplication {
         upgradeTriggeredThisWave = false;
         ensureEnemyRenderNodes();
 
-        log.info("Entered room " + target.getTemplate().getName() + " @(" + targetGx + "," + targetGy + ")");
-    }
-
-    /**
-     * 获取相反方向。
-     */
-    private static String getOppositeDirection(String dir) {
-        return switch (dir) {
-            case "N" -> "S";
-            case "S" -> "N";
-            case "W" -> "E";
-            case "E" -> "W";
-            default -> dir;
-        };
+        log.info("Entered room " + targetRoom.getTemplate().getName()
+                 + " @(" + targetRoom.getGridX() + "," + targetRoom.getGridY() + ")");
     }
 
     // ============================================================
