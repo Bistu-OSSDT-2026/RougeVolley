@@ -231,6 +231,11 @@ public class GameUI {
         title.setFont(Font.font("Arial", 36));
         title.setFill(Color.WHITE);
 
+        // ── 操作键位提示 ──
+        Text controlsHint = new Text("WASD / 方向键 移动  |  鼠标左键 射击  |  ESC 继续");
+        controlsHint.setFont(Font.font("Arial", 13));
+        controlsHint.setFill(Color.rgb(148, 163, 184)); // slate-400
+
         // ── 已选升级 / 属性展示区域（每次打开暂停菜单时动态刷新） ──
         pauseUpgradesList = new VBox(6);
         pauseUpgradesList.setAlignment(Pos.CENTER);
@@ -240,7 +245,7 @@ public class GameUI {
         Button restartBtn  = createPauseButton("重新开始", this::handlePauseRestart);
         Button quitBtn     = createPauseButton("退出游戏", this::handlePauseQuit);
 
-        content.getChildren().addAll(title, pauseUpgradesList, continueBtn, restartBtn, quitBtn);
+        content.getChildren().addAll(title, controlsHint, pauseUpgradesList, continueBtn, restartBtn, quitBtn);
         root.getChildren().addAll(dim, content);
         return root;
     }

@@ -36,9 +36,13 @@ public final class MenuFactory {
         subtitle.setFont(Font.font("Arial", 18));
         subtitle.setFill(Color.LIGHTGRAY);
 
+        Text controls = new Text("操作：WASD / 方向键 移动  |  鼠标左键 射击");
+        controls.setFont(Font.font("Arial", 14));
+        controls.setFill(Color.rgb(148, 163, 184)); // slate-400
+
         Button startBtn = createMenuButton("开始游戏", onStart);
 
-        content.getChildren().addAll(title, subtitle, startBtn);
+        content.getChildren().addAll(title, subtitle, controls, startBtn);
         root.getChildren().add(content);
         return root;
     }
